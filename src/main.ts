@@ -20,8 +20,8 @@ let floorsSheet: TileSheet;
 let ceilsSheet: TileSheet;
 let spriteSheet: SpriteSheet;
 
-let minimapCtx: CanvasRenderingContext2D | null = null;
 let minimapEl: HTMLCanvasElement | null = null;
+let minimapCtx: CanvasRenderingContext2D | null = null;
 const MINIMAP_SIZE = 200;
 
 let lastTime = 0;
@@ -30,17 +30,7 @@ let currentLevelIndex = 0;
 let footstepTimer = 0;
 let groanTimer = 0;
 let levelTransitioning = false;
-
-let minimapVisible = false;
-let lastTabDown = false;
-let slashCooldown = 0;
-let slashAnimTimer = 0;
-let lastSpaceDown = false;
-
-const SLASH_RADIUS = 1.5;
-const SLASH_FOV = Math.PI / 3;
-const SLASH_COOLDOWN = 0.5;
-const SLASH_ANIM_DURATION = 0.2; // seconds the slash HUD indicator is shown
+let brightnessScale = 1.0;
 
 const LEVEL_URLS = [
   '/maps/level1.wdmap.json',
@@ -100,11 +90,9 @@ function drawMinimap(map: WDMap): void {
     }
   }
 
-  // Pre-compute dot sizes (tileW/tileH are constant for this frame)
   const spriteDotR = Math.max(2, tileW * 0.3);
   const playerDotR = Math.max(3, tileW * 0.4);
 
-  // Draw sprites as yellow dots
   for (const s of sprites) {
     ctx.fillStyle = '#ffff00';
     ctx.beginPath();
@@ -112,7 +100,6 @@ function drawMinimap(map: WDMap): void {
     ctx.fill();
   }
 
-  // Draw player direction line
   const px = camera.pos[0] * tileW;
   const py = camera.pos[1] * tileH;
   const lineLen = Math.max(tileW, tileH) * 1.5;
@@ -123,7 +110,6 @@ function drawMinimap(map: WDMap): void {
   ctx.lineTo(px + camera.dir[0] * lineLen, py + camera.dir[1] * lineLen);
   ctx.stroke();
 
-  // Draw player as red dot
   ctx.fillStyle = '#ff0000';
   ctx.beginPath();
   ctx.arc(px, py, playerDotR, 0, Math.PI * 2);
@@ -135,21 +121,15 @@ function updateCompass(): void {
   if (!compassEl) return;
   const angle = Math.atan2(camera.dir[1], camera.dir[0]);
   const deg = ((angle * 180) / Math.PI + 360) % 360;
-  // angle=0 → East on the unit circle; dirs are ordered E,NE,N,NW,W,SW,S,SE (counter-clockwise)
   const dirs = ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'];
   const idx = Math.round(deg / 45) % 8;
   compassEl.textContent = dirs[idx];
 }
 
 function showHUD(visible: boolean): void {
+  if (minimapEl) minimapEl.style.display = visible ? 'block' : 'none';
   const compass = document.getElementById('hud-compass');
-  const slashEl = document.getElementById('hud-slash');
-  if (!visible) {
-    minimapVisible = false;
-    if (minimap) minimap.style.display = 'none';
-  }
   if (compass) compass.style.display = visible ? 'block' : 'none';
-  if (slashEl) slashEl.style.display = 'none';
 }
 
 function showFlash(text: string, durationMs: number): void {
@@ -163,6 +143,21 @@ function showFlash(text: string, durationMs: number): void {
   div.textContent = text;
   document.body.appendChild(div);
   setTimeout(() => div.remove(), durationMs);
+}
+
+function showBrightnessHUD(): void {
+  const existing = document.getElementById('brightness-hud');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'brightness-hud';
+  div.style.cssText =
+    'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);' +
+    'color:#ff0;font-family:monospace;font-size:1rem;' +
+    'background:rgba(0,0,0,0.6);padding:4px 12px;border:1px solid #ff0;' +
+    'z-index:10;pointer-events:none;';
+  div.textContent = `Brightness: ${Math.round(brightnessScale * 100)}%`;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 1500);
 }
 
 function returnToMenu(): void {
@@ -191,18 +186,6 @@ function gameLoop(timestamp: number): void {
   const prevY = camera.pos[1];
   camera.update(dt, input, currentMap);
 
-  // TAB toggles minimap
-  const tabDown = input.isDown('Tab');
-  if (tabDown !== lastTabDown) {
-    lastTabDown = tabDown;
-    if (tabDown) {
-      minimapVisible = !minimapVisible;
-      const mm = document.getElementById('minimap') as HTMLCanvasElement | null;
-      if (mm) mm.style.display = minimapVisible ? 'block' : 'none';
-    }
-  }
-
-  // Footstep sounds while moving
   const moved = camera.pos[0] !== prevX || camera.pos[1] !== prevY;
   if (moved) {
     footstepTimer += dt;
@@ -214,7 +197,6 @@ function gameLoop(timestamp: number): void {
     footstepTimer = 0;
   }
 
-  // Exit tile detection
   const tx = Math.floor(camera.pos[0]);
   const ty = Math.floor(camera.pos[1]);
   const rows = currentMap.tiles.length;
@@ -233,45 +215,10 @@ function gameLoop(timestamp: number): void {
     return;
   }
 
-  // Update sprites (pass tiles for wall collision)
   for (const s of sprites) {
     s.update(dt, camera.pos[0], camera.pos[1], currentMap.tiles);
   }
 
-  // Slash cooldown timers
-  if (slashCooldown > 0) slashCooldown -= dt;
-  if (slashAnimTimer > 0) slashAnimTimer -= dt;
-
-  // Trigger slash on Space (toggle-edge), F key, or left mouse click
-  const spaceDown = input.isDown('Space') || input.isDown('KeyF');
-  const attackTriggered = (spaceDown && !lastSpaceDown) || input.consumeClick();
-  lastSpaceDown = spaceDown;
-
-  if (attackTriggered && slashCooldown <= 0) {
-    slashCooldown = SLASH_COOLDOWN;
-    slashAnimTimer = SLASH_ANIM_DURATION;
-    audio.playSlash();
-
-    for (const s of sprites) {
-      if (!s.active) continue;
-      if (s.distToPlayer > SLASH_RADIUS) continue;
-      const dx = s.x - camera.pos[0];
-      const dy = s.y - camera.pos[1];
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < 0.001) { // epsilon: monster on top of player — always hit, avoids div-by-zero
-        s.active = false;
-        continue;
-      }
-      const nx = dx / dist;
-      const ny = dy / dist;
-      const dot = nx * camera.dir[0] + ny * camera.dir[1];
-      if (dot >= Math.cos(SLASH_FOV)) {
-        s.active = false;
-      }
-    }
-  }
-
-  // Handle monster attacks → hurt sound + respawn
   for (const s of sprites) {
     if (s.playerHit) {
       s.playerHit = false;
@@ -281,10 +228,8 @@ function gameLoop(timestamp: number): void {
     }
   }
 
-  // Remove dead sprites
   sprites = sprites.filter(s => s.active);
 
-  // Occasional monster groans for nearby monsters
   groanTimer += dt;
   if (groanTimer >= 3.0) {
     groanTimer = 0;
@@ -293,15 +238,6 @@ function gameLoop(timestamp: number): void {
     }
   }
 
-  // TAB minimap toggle (edge-triggered)
-  const tabNow = input.isDown('Tab');
-  if (tabNow && !lastTabDown) {
-    minimapVisible = !minimapVisible;
-    if (minimapEl) minimapEl.style.display = minimapVisible ? 'block' : 'none';
-  }
-  lastTabDown = tabNow;
-
-  // Apply per-level ambient tint scaled by player brightness adjustment
   const amb = currentMap.meta.ambientColor ?? [1, 1, 1];
   renderer.setAmbientColor(amb[0] * brightnessScale, amb[1] * brightnessScale, amb[2] * brightnessScale);
 
@@ -309,18 +245,7 @@ function gameLoop(timestamp: number): void {
   renderer.drawWorld(camera, currentMap, wallsSheet.texture, floorsSheet.texture, ceilsSheet.texture, timeSeconds);
   renderer.drawSprites(camera, sprites, spriteSheet);
 
-  // Update slash flash HUD
-  const slashEl = document.getElementById('hud-slash');
-  if (slashEl) {
-    if (slashAnimTimer > 0) {
-      slashEl.style.display = 'block';
-      slashEl.style.opacity = String(slashAnimTimer / SLASH_ANIM_DURATION);
-    } else {
-      slashEl.style.display = 'none';
-    }
-  }
-
-  if (minimapVisible && currentMap) drawMinimap(currentMap);
+  drawMinimap(currentMap);
   updateCompass();
 
   animFrameId = requestAnimationFrame(gameLoop);
@@ -340,7 +265,7 @@ async function startLevel(levelIndex: number): Promise<void> {
   camera = new Camera(sp.x, sp.y, sp.angle);
 
   const amb = map.meta.ambientColor ?? [1, 1, 1];
-  renderer.setAmbientColor(amb[0], amb[1], amb[2]);
+  renderer.setAmbientColor(amb[0] * brightnessScale, amb[1] * brightnessScale, amb[2] * brightnessScale);
 
   document.getElementById('overlay')!.style.display = 'none';
   (document.getElementById('btn-menu') as HTMLButtonElement).style.display = 'block';
@@ -370,10 +295,8 @@ async function main(): Promise<void> {
   const gl = renderer.gl;
 
   const minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement | null;
-  if (minimapCanvas) {
-    minimapEl = minimapCanvas;
-    minimapCtx = minimapCanvas.getContext('2d');
-  }
+  minimapEl = minimapCanvas;
+  if (minimapCanvas) minimapCtx = minimapCanvas.getContext('2d');
 
   input = new InputManager(canvas);
   audio = new AudioManager();
@@ -398,7 +321,6 @@ async function main(): Promise<void> {
 
   console.log('🎮 WebDoom: all textures loaded, ready to play!');
 
-  // Level-select buttons (resume audio context on first click)
   for (let i = 0; i < LEVEL_URLS.length; i++) {
     const btn = document.getElementById(`btn-level${i + 1}`);
     if (btn) {
@@ -409,18 +331,13 @@ async function main(): Promise<void> {
     }
   }
 
-  // "Return to Menu" HUD button
   document.getElementById('btn-menu')!.addEventListener('click', returnToMenu);
 
-  // Brightness adjustment keys (also suppress browser zoom on Minus/Equal)
-  window.addEventListener('keydown', e => {
-    if (!currentMap) return;
-    if (e.code === 'Equal' || e.code === 'NumpadAdd') {
-      e.preventDefault();
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Equal' || e.key === '+') {
       brightnessScale = Math.min(2.0, Math.round((brightnessScale + 0.1) * 10) / 10);
       showBrightnessHUD();
-    } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
-      e.preventDefault();
+    } else if (e.code === 'Minus' || e.key === '-') {
       brightnessScale = Math.max(0.1, Math.round((brightnessScale - 0.1) * 10) / 10);
       showBrightnessHUD();
     }
