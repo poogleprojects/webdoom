@@ -33,6 +33,8 @@ uniform vec3  u_fogColor;
 
 const float TILE_COLS = 5.0;
 const float TILE_ROWS = 5.0;
+const float RAY_EPSILON   = 1e-30; // prevents division by zero in DDA
+const float FLOOR_EPSILON = 0.0001; // prevents division by zero in floor/ceil rowDist
 
 vec2 tileUV(float tileID, vec2 localUV) {
     float col = mod(tileID, TILE_COLS);
@@ -57,8 +59,8 @@ void main() {
     ivec2 mapPos = ivec2(floor(u_playerPos));
     vec2 sideDist;
     vec2 deltaDist = vec2(
-        abs(1.0 / (rayDir.x == 0.0 ? 1e-30 : rayDir.x)),
-        abs(1.0 / (rayDir.y == 0.0 ? 1e-30 : rayDir.y))
+        abs(1.0 / (rayDir.x == 0.0 ? RAY_EPSILON : rayDir.x)),
+        abs(1.0 / (rayDir.y == 0.0 ? RAY_EPSILON : rayDir.y))
     );
     float perpWallDist = 0.0;
     ivec2 step;
@@ -131,7 +133,7 @@ void main() {
     } else if (v_uv.y < wallTop) {
         // CEILING
         float pY = v_uv.y;
-        float rowDist = 0.5 / max(0.5 - pY, 0.0001);
+        float rowDist = 0.5 / max(0.5 - pY, FLOOR_EPSILON);
 
         vec2 worldPos = u_playerPos + rowDist * rayDir;
         vec2 uv = tileUV(u_ceilTileID, worldPos);
@@ -142,7 +144,7 @@ void main() {
     } else {
         // FLOOR
         float pY = v_uv.y;
-        float rowDist = 0.5 / max(pY - 0.5, 0.0001);
+        float rowDist = 0.5 / max(pY - 0.5, FLOOR_EPSILON);
 
         vec2 worldPos = u_playerPos + rowDist * rayDir;
         vec2 uv = tileUV(u_floorTileID, worldPos);

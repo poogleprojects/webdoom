@@ -245,7 +245,9 @@ export class Renderer {
     const [planeX, planeY] = camera.plane;
     const [posX, posY] = camera.pos;
 
-    const invDet = 1.0 / (planeX * dirY - dirX * planeY);
+    const det = planeX * dirY - dirX * planeY;
+    if (Math.abs(det) < 1e-10) return;
+    const invDet = 1.0 / det;
 
     for (const sprite of sorted) {
       const dx = sprite.x - posX;
