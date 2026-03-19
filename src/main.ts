@@ -58,6 +58,20 @@ async function startLevel(url: string): Promise<void> {
   animFrameId = requestAnimationFrame(gameLoop);
 }
 
+async function loadTexture<T>(
+  label: string,
+  loader: () => Promise<T>
+): Promise<T> {
+  try {
+    const result = await loader();
+    console.log(`✅ Loaded texture: ${label}`);
+    return result;
+  } catch (e) {
+    console.warn(`⚠️ Failed to load texture: ${label} —`, e);
+    throw e;
+  }
+}
+
 async function main(): Promise<void> {
   const canvas = document.getElementById('webdoom') as HTMLCanvasElement;
   canvas.width = window.innerWidth;
@@ -68,14 +82,25 @@ async function main(): Promise<void> {
 
   input = new InputManager(canvas);
 
-  wallsSheet = await TileSheetParser.load(gl, '/textures/wall_textures.png', 5, 5,
-    () => PlaceholderTextures.wallSheet());
-  floorsSheet = await TileSheetParser.load(gl, '/textures/floor_textures.png', 5, 5,
-    () => PlaceholderTextures.floorSheet());
-  ceilsSheet = await TileSheetParser.load(gl, '/textures/ceiling_textures.png', 5, 5,
-    () => PlaceholderTextures.ceilSheet());
-  spriteSheet = await SpriteSheetParser.load(gl, '/textures/sprites_sheet.png',
-    () => PlaceholderTextures.spriteSheet());
+  console.log('🎮 WebDoom: loading textures...');
+
+  wallsSheet = await loadTexture('walls.png', () =>
+    TileSheetParser.load(gl, '/textures/walls.png', 5, 5,
+      () => { console.warn('⚠️ walls.png missing — using placeholder'); return PlaceholderTextures.wallSheet(); }));
+
+  floorsSheet = await loadTexture('floors.png', () =>
+    TileSheetParser.load(gl, '/textures/floors.png', 5, 5,
+      () => { console.warn('⚠️ floors.png missing — using placeholder'); return PlaceholderTextures.floorSheet(); }));
+
+  ceilsSheet = await loadTexture('ceilings.png', () =>
+    TileSheetParser.load(gl, '/textures/ceilings.png', 5, 5,
+      () => { console.warn('⚠️ ceilings.png missing — using placeholder'); return PlaceholderTextures.ceilSheet(); }));
+
+  spriteSheet = await loadTexture('sprite_sheet.png', () =>
+    SpriteSheetParser.load(gl, '/textures/sprite_sheet.png',
+      () => { console.warn('⚠️ sprite_sheet.png missing — using placeholder'); return PlaceholderTextures.spriteSheet(); }));
+
+  console.log('🎮 WebDoom: all textures loaded, ready to play!');
 
   document.getElementById('btn-level1')!.addEventListener('click', () =>
     startLevel('/maps/level1.wdmap.json'));
