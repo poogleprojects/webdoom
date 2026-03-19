@@ -60,6 +60,38 @@ export class AudioManager {
     source.start(ctx.currentTime);
   }
 
+  /** Sharp high-frequency swoosh — player slash */
+  playSlash(): void {
+    const ctx = this.ctx;
+    const SLASH_SOUND_DURATION = 0.12; // seconds
+    const bufferSize = Math.ceil(ctx.sampleRate * SLASH_SOUND_DURATION);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      const t = i / bufferSize;
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-t * 18) * (1 - t);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.4, ctx.currentTime);
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + SLASH_SOUND_DURATION);
+    oscGain.gain.setValueAtTime(0.25, ctx.currentTime);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + SLASH_SOUND_DURATION);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    source.connect(gain);
+    gain.connect(ctx.destination);
+    source.start(ctx.currentTime);
+    osc.start(ctx.currentTime);
+    source.stop(ctx.currentTime + SLASH_SOUND_DURATION);
+    osc.stop(ctx.currentTime + SLASH_SOUND_DURATION);
+  }
+
   /** Low triangle wave growl — monster ambient */
   playMonsterGroan(): void {
     const ctx = this.ctx;
