@@ -2,10 +2,10 @@ import { Camera } from './Camera';
 import { WDMap } from '../world/Map';
 import { SpriteEntity } from '../entities/SpriteEntity';
 import { SpriteSheet } from '../assets/SpriteSheetParser';
-import raycasterVert from '../shaders/raycaster.vert.glsl';
-import raycasterFrag from '../shaders/raycaster.frag.glsl';
-import spriteVert from '../shaders/sprite.vert.glsl';
-import spriteFrag from '../shaders/sprite.frag.glsl';
+import raycasterVert from '../shaders/raycaster.vert.glsl?raw';
+import raycasterFrag from '../shaders/raycaster.frag.glsl?raw';
+import spriteVert from '../shaders/sprite.vert.glsl?raw';
+import spriteFrag from '../shaders/sprite.frag.glsl?raw';
 
 export class Renderer {
   gl: WebGL2RenderingContext;
