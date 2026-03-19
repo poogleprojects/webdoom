@@ -7,6 +7,24 @@ import raycasterFrag from '../shaders/raycaster.frag.glsl?raw';
 import spriteVert from '../shaders/sprite.vert.glsl?raw';
 import spriteFrag from '../shaders/sprite.frag.glsl?raw';
 
+// Simple blit shaders: draw a texture onto a fullscreen quad
+const blitVertSrc = `#version 300 es
+in vec2 a_position;
+out vec2 v_uv;
+void main() {
+  v_uv = a_position * 0.5 + 0.5;
+  gl_Position = vec4(a_position, 0.0, 1.0);
+}`;
+
+const blitFragSrc = `#version 300 es
+precision mediump float;
+in vec2 v_uv;
+out vec4 fragColor;
+uniform sampler2D u_tex;
+void main() {
+  fragColor = texture(u_tex, v_uv);
+}`;
+
 export class Renderer {
   gl: WebGL2RenderingContext;
   private width: number = 0;
@@ -21,13 +39,18 @@ export class Renderer {
   private spVAO!: WebGLVertexArrayObject;
   private spVBO!: WebGLBuffer;
 
+  // Blit pass (FBO color -> default framebuffer, avoids blitFramebuffer on MSAA default FB)
+  private blitProgram!: WebGLProgram;
+  private blitVAO!: WebGLVertexArrayObject;
+
   // FBO
   private fbo!: WebGLFramebuffer;
   private colorTex!: WebGLTexture;
   private depthTex!: WebGLTexture;
 
   constructor(canvas: HTMLCanvasElement) {
-    const gl = canvas.getContext('webgl2');
+    // Request a non-antialiased context to avoid multisampled default framebuffer issues
+    const gl = canvas.getContext('webgl2', { antialias: false });
     if (!gl) throw new Error('WebGL2 not available');
     this.gl = gl;
 
@@ -37,6 +60,7 @@ export class Renderer {
     this._initShaders();
     this._initQuad();
     this._initSpriteVAO();
+    this._initBlitPass();
     this.resize(canvas.width, canvas.height);
   }
 
@@ -70,6 +94,23 @@ export class Renderer {
   private _initShaders(): void {
     this.rcProgram = this._linkProgram(raycasterVert, raycasterFrag);
     this.spProgram = this._linkProgram(spriteVert, spriteFrag);
+  }
+
+  private _initBlitPass(): void {
+    const gl = this.gl;
+    this.blitProgram = this._linkProgram(blitVertSrc, blitFragSrc);
+
+    const verts = new Float32Array([-1, -1, 1, -1, -1, 1, 1, -1, 1, 1, -1, 1]);
+    const vao = gl.createVertexArray()!;
+    gl.bindVertexArray(vao);
+    const vbo = gl.createBuffer()!;
+    gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+    gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(this.blitProgram, 'a_position');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    gl.bindVertexArray(null);
+    this.blitVAO = vao;
   }
 
   private _initQuad(): void {
@@ -154,6 +195,7 @@ export class Renderer {
     const gl = this.gl;
     const prog = this.rcProgram;
 
+    // --- Pass 1: render raycasted scene into FBO ---
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
     gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
     gl.viewport(0, 0, this.width, this.height);
@@ -204,16 +246,18 @@ export class Renderer {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);
 
-    // Blit scene color to default framebuffer
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.fbo);
-    gl.readBuffer(gl.COLOR_ATTACHMENT0);
-    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
-    gl.blitFramebuffer(
-      0, 0, this.width, this.height,
-      0, 0, this.width, this.height,
-      gl.COLOR_BUFFER_BIT, gl.NEAREST
-    );
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    // --- Blit pass: draw FBO color texture to default framebuffer via fullscreen quad ---
+    // (avoids glBlitFramebuffer which fails when the default FB is multisampled)
+    gl.viewport(0, 0, this.width, this.height);
+    gl.useProgram(this.blitProgram);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.colorTex);
+    gl.uniform1i(gl.getUniformLocation(this.blitProgram, 'u_tex'), 0);
+    gl.bindVertexArray(this.blitVAO);
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.bindVertexArray(null);
   }
 
   drawSprites(
