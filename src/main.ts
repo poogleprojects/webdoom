@@ -20,6 +20,9 @@ let floorsSheet: TileSheet;
 let ceilsSheet: TileSheet;
 let spriteSheet: SpriteSheet;
 
+let minimapCtx: CanvasRenderingContext2D | null = null;
+const MINIMAP_SIZE = 200;
+
 let lastTime = 0;
 let animFrameId = 0;
 let currentLevelIndex = 0;
@@ -58,6 +61,81 @@ function spawnMonsterRandom(tiles: number[][]): SpriteEntity | null {
   return new SpriteEntity(col + 0.5, row + 0.5, Math.floor(Math.random() * MAX_MONSTER_TYPES), 8);
 }
 
+function drawMinimap(map: WDMap): void {
+  if (!minimapCtx) return;
+  const ctx = minimapCtx;
+  const tiles = map.tiles;
+  const rows = tiles.length;
+  const cols = tiles[0]?.length ?? 0;
+  if (rows === 0 || cols === 0) return;
+
+  const tileW = MINIMAP_SIZE / cols;
+  const tileH = MINIMAP_SIZE / rows;
+
+  ctx.clearRect(0, 0, MINIMAP_SIZE, MINIMAP_SIZE);
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const v = tiles[r][c];
+      if (v === 9) {
+        ctx.fillStyle = '#00ff00';
+      } else if (v === 0) {
+        ctx.fillStyle = '#222';
+      } else {
+        ctx.fillStyle = '#666';
+      }
+      ctx.fillRect(c * tileW, r * tileH, tileW, tileH);
+    }
+  }
+
+  // Pre-compute dot sizes (tileW/tileH are constant for this frame)
+  const spriteDotR = Math.max(2, tileW * 0.3);
+  const playerDotR = Math.max(3, tileW * 0.4);
+
+  // Draw sprites as yellow dots
+  for (const s of sprites) {
+    ctx.fillStyle = '#ffff00';
+    ctx.beginPath();
+    ctx.arc(s.x * tileW, s.y * tileH, spriteDotR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw player direction line
+  const px = camera.pos[0] * tileW;
+  const py = camera.pos[1] * tileH;
+  const lineLen = Math.max(tileW, tileH) * 1.5;
+  ctx.strokeStyle = '#ff0000';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(px, py);
+  ctx.lineTo(px + camera.dir[0] * lineLen, py + camera.dir[1] * lineLen);
+  ctx.stroke();
+
+  // Draw player as red dot
+  ctx.fillStyle = '#ff0000';
+  ctx.beginPath();
+  ctx.arc(px, py, playerDotR, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function updateCompass(): void {
+  const compassEl = document.getElementById('hud-compass');
+  if (!compassEl) return;
+  const angle = Math.atan2(camera.dir[1], camera.dir[0]);
+  const deg = ((angle * 180) / Math.PI + 360) % 360;
+  // angle=0 → East on the unit circle; dirs are ordered E,NE,N,NW,W,SW,S,SE (counter-clockwise)
+  const dirs = ['E', 'NE', 'N', 'NW', 'W', 'SW', 'S', 'SE'];
+  const idx = Math.round(deg / 45) % 8;
+  compassEl.textContent = dirs[idx];
+}
+
+function showHUD(visible: boolean): void {
+  const minimap = document.getElementById('minimap') as HTMLCanvasElement | null;
+  const compass = document.getElementById('hud-compass');
+  if (minimap) minimap.style.display = visible ? 'block' : 'none';
+  if (compass) compass.style.display = visible ? 'block' : 'none';
+}
+
 function showFlash(text: string, durationMs: number): void {
   const div = document.createElement('div');
   div.id = 'flash-overlay';
@@ -81,6 +159,7 @@ function returnToMenu(): void {
   currentMap = null;
   document.getElementById('overlay')!.style.display = 'flex';
   (document.getElementById('btn-menu') as HTMLButtonElement).style.display = 'none';
+  showHUD(false);
 }
 
 function gameLoop(timestamp: number): void {
@@ -158,8 +237,12 @@ function gameLoop(timestamp: number): void {
   const amb = currentMap.meta.ambientColor ?? [1, 1, 1];
   renderer.setAmbientColor(amb[0], amb[1], amb[2]);
 
-  renderer.drawWorld(camera, currentMap, wallsSheet.texture, floorsSheet.texture, ceilsSheet.texture);
+  const timeSeconds = performance.now() / 1000.0;
+  renderer.drawWorld(camera, currentMap, wallsSheet.texture, floorsSheet.texture, ceilsSheet.texture, timeSeconds);
   renderer.drawSprites(camera, sprites, spriteSheet);
+
+  drawMinimap(currentMap);
+  updateCompass();
 
   animFrameId = requestAnimationFrame(gameLoop);
 }
@@ -182,6 +265,7 @@ async function startLevel(levelIndex: number): Promise<void> {
 
   document.getElementById('overlay')!.style.display = 'none';
   (document.getElementById('btn-menu') as HTMLButtonElement).style.display = 'block';
+  showHUD(true);
 
   lastTime = performance.now();
   animFrameId = requestAnimationFrame(gameLoop);
@@ -205,6 +289,9 @@ async function main(): Promise<void> {
 
   renderer = new Renderer(canvas);
   const gl = renderer.gl;
+
+  const minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement | null;
+  if (minimapCanvas) minimapCtx = minimapCanvas.getContext('2d');
 
   input = new InputManager(canvas);
   audio = new AudioManager();

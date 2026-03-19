@@ -195,7 +195,8 @@ export class Renderer {
     map: WDMap,
     wallsTex: WebGLTexture,
     floorsTex: WebGLTexture,
-    ceilsTex: WebGLTexture
+    ceilsTex: WebGLTexture,
+    time: number = 0
   ): void {
     const gl = this.gl;
     const prog = this.rcProgram;
@@ -220,6 +221,8 @@ export class Renderer {
 
     const amb = this._ambientColor;
     gl.uniform3f(gl.getUniformLocation(prog, 'u_ambientColor'), amb[0], amb[1], amb[2]);
+
+    gl.uniform1f(gl.getUniformLocation(prog, 'u_time'), time);
 
     gl.uniform2f(gl.getUniformLocation(prog, 'u_mapSize'), map.meta.width, map.meta.height);
 

@@ -6,12 +6,12 @@ export class InputManager {
   constructor(canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', e => {
       this.keys.add(e.code);
-      // Also track by e.key (lowercased) so Camera can check 'w','a','s','d'
-      this.keys.add(e.key.toLowerCase());
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        e.preventDefault();
+      }
     });
     window.addEventListener('keyup', e => {
       this.keys.delete(e.code);
-      this.keys.delete(e.key.toLowerCase());
     });
     canvas.addEventListener('click', () => canvas.requestPointerLock());
     document.addEventListener('pointerlockchange', () => {
