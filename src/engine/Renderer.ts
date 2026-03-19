@@ -29,6 +29,7 @@ export class Renderer {
   gl: WebGL2RenderingContext;
   private width: number = 0;
   private height: number = 0;
+  private _ambientColor: [number, number, number] = [1, 1, 1];
 
   // Raycaster pass
   private rcProgram!: WebGLProgram;
@@ -185,6 +186,10 @@ export class Renderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
+  setAmbientColor(r: number, g: number, b: number): void {
+    this._ambientColor = [r, g, b];
+  }
+
   drawWorld(
     camera: Camera,
     map: WDMap,
@@ -212,6 +217,9 @@ export class Renderer {
     const fog = map.meta.fogColor;
     gl.uniform1f(gl.getUniformLocation(prog, 'u_fogDist'), map.meta.fogDist);
     gl.uniform3f(gl.getUniformLocation(prog, 'u_fogColor'), fog[0], fog[1], fog[2]);
+
+    const amb = this._ambientColor;
+    gl.uniform3f(gl.getUniformLocation(prog, 'u_ambientColor'), amb[0], amb[1], amb[2]);
 
     gl.uniform2f(gl.getUniformLocation(prog, 'u_mapSize'), map.meta.width, map.meta.height);
 

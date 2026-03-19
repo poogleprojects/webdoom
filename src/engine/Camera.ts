@@ -25,28 +25,28 @@ export class Camera {
     if (input.isDown('KeyW') || input.isDown('ArrowUp') || input.isDown('w')) {
       const nx = px + dx * this.moveSpeed * dt;
       const ny = py + dy * this.moveSpeed * dt;
-      if (tiles[Math.floor(py)][Math.floor(nx)] === 0) this.pos[0] = nx;
-      if (tiles[Math.floor(ny)][Math.floor(px)] === 0) this.pos[1] = ny;
+      if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
+      if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
     if (input.isDown('KeyS') || input.isDown('ArrowDown') || input.isDown('s')) {
       const nx = px - dx * this.moveSpeed * dt;
       const ny = py - dy * this.moveSpeed * dt;
-      if (tiles[Math.floor(py)][Math.floor(nx)] === 0) this.pos[0] = nx;
-      if (tiles[Math.floor(ny)][Math.floor(px)] === 0) this.pos[1] = ny;
+      if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
+      if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
 
     // Strafe — support KeyA/KeyD (physical) and lowercase 'a'/'d'
     if (input.isDown('KeyA') || input.isDown('a')) {
       const nx = px - this.plane[0] * this.moveSpeed * dt;
       const ny = py - this.plane[1] * this.moveSpeed * dt;
-      if (tiles[Math.floor(py)][Math.floor(nx)] === 0) this.pos[0] = nx;
-      if (tiles[Math.floor(ny)][Math.floor(px)] === 0) this.pos[1] = ny;
+      if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
+      if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
     if (input.isDown('KeyD') || input.isDown('d')) {
       const nx = px + this.plane[0] * this.moveSpeed * dt;
       const ny = py + this.plane[1] * this.moveSpeed * dt;
-      if (tiles[Math.floor(py)][Math.floor(nx)] === 0) this.pos[0] = nx;
-      if (tiles[Math.floor(ny)][Math.floor(px)] === 0) this.pos[1] = ny;
+      if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
+      if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
 
     // Rotate (arrow keys + mouse)
@@ -66,5 +66,12 @@ export class Camera {
     this.dir[1] = dx * sin + dy * cos;
     this.plane[0] = px * cos - py * sin;
     this.plane[1] = px * sin + py * cos;
+  }
+
+  /** Tile values the player (and monsters) can walk onto. */
+  static _passable(tiles: number[][], row: number, col: number): boolean {
+    if (row < 0 || col < 0 || row >= tiles.length || col >= (tiles[0]?.length ?? 0)) return false;
+    const v = tiles[row][col];
+    return v === 0 || v === 9;
   }
 }

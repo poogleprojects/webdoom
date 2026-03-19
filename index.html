@@ -14,13 +14,14 @@
       display:flex; flex-direction:column;
       align-items:center; justify-content:center; color:#f00;
       font-family:monospace; font-size:2rem;
-      z-index:10;
+      z-index:10; overflow-y:auto;
     }
-    #overlay h1 { margin-bottom:2rem; font-size:3rem; text-shadow:0 0 20px #f00; }
+    #overlay h1 { margin-bottom:1.5rem; font-size:3rem; text-shadow:0 0 20px #f00; }
+    .btn-grid { display:flex; flex-wrap:wrap; justify-content:center; max-width:700px; }
     .btn {
-      margin:.5rem; padding:1rem 2rem;
+      margin:.4rem; padding:.7rem 1.4rem;
       background:#300; color:#f00; border:2px solid #f00;
-      font-family:monospace; font-size:1.5rem; cursor:pointer;
+      font-family:monospace; font-size:1.2rem; cursor:pointer;
     }
     .btn:hover { background:#600; }
     #hud {
@@ -30,16 +31,35 @@
       border:2px solid rgba(255,255,255,0.8);
       border-radius:50%; pointer-events:none; z-index:5;
     }
+    #btn-menu {
+      position:fixed; top:12px; left:12px;
+      padding:.4rem .8rem;
+      background:#300; color:#f00; border:2px solid #f00;
+      font-family:monospace; font-size:0.9rem; cursor:pointer;
+      z-index:6; display:none;
+    }
+    #btn-menu:hover { background:#600; }
   </style>
 </head>
 <body>
   <canvas id="webdoom"></canvas>
   <div id="hud"></div>
+  <button id="btn-menu" class="btn">MENU</button>
   <div id="overlay">
     <h1>&#9760; WEBDOOM &#9760;</h1>
-    <button class="btn" id="btn-level1">Level 1: The Entry</button>
-    <button class="btn" id="btn-level2">Level 2: The Maze</button>
-    <p style="font-size:0.8rem;margin-top:1rem;color:#888">Click to capture mouse</p>
+    <div class="btn-grid">
+      <button class="btn" id="btn-level1">Level 1</button>
+      <button class="btn" id="btn-level2">Level 2</button>
+      <button class="btn" id="btn-level3">Level 3</button>
+      <button class="btn" id="btn-level4">Level 4</button>
+      <button class="btn" id="btn-level5">Level 5</button>
+      <button class="btn" id="btn-level6">Level 6</button>
+      <button class="btn" id="btn-level7">Level 7</button>
+      <button class="btn" id="btn-level8">Level 8</button>
+      <button class="btn" id="btn-level9">Level 9</button>
+      <button class="btn" id="btn-level10">Level 10</button>
+    </div>
+    <p style="font-size:0.8rem;margin-top:1rem;color:#888">Click canvas to capture mouse · WASD / arrows to move</p>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>

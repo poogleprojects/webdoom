@@ -31,6 +31,9 @@ uniform float u_ceilTileID;
 uniform float u_fogDist;
 uniform vec3  u_fogColor;
 
+// Ambient light tint (per-level colour grading)
+uniform vec3  u_ambientColor;
+
 const float TILE_COLS = 5.0;
 const float TILE_ROWS = 5.0;
 const float RAY_EPSILON   = 1e-30; // prevents division by zero in DDA
@@ -154,6 +157,7 @@ void main() {
 
     // Distance fog
     float fogFactor = clamp(depth / u_fogDist, 0.0, 1.0);
+    color *= u_ambientColor;
     color = mix(color, u_fogColor, fogFactor);
 
     fragColor = vec4(color, 1.0);
