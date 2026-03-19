@@ -21,6 +21,7 @@ let ceilsSheet: TileSheet;
 let spriteSheet: SpriteSheet;
 
 let minimapCtx: CanvasRenderingContext2D | null = null;
+let minimapEl: HTMLCanvasElement | null = null;
 const MINIMAP_SIZE = 200;
 
 let lastTime = 0;
@@ -141,7 +142,6 @@ function updateCompass(): void {
 }
 
 function showHUD(visible: boolean): void {
-  const minimap = document.getElementById('minimap') as HTMLCanvasElement | null;
   const compass = document.getElementById('hud-compass');
   const slashEl = document.getElementById('hud-slash');
   if (!visible) {
@@ -293,9 +293,17 @@ function gameLoop(timestamp: number): void {
     }
   }
 
-  // Apply per-level ambient tint
+  // TAB minimap toggle (edge-triggered)
+  const tabNow = input.isDown('Tab');
+  if (tabNow && !lastTabDown) {
+    minimapVisible = !minimapVisible;
+    if (minimapEl) minimapEl.style.display = minimapVisible ? 'block' : 'none';
+  }
+  lastTabDown = tabNow;
+
+  // Apply per-level ambient tint scaled by player brightness adjustment
   const amb = currentMap.meta.ambientColor ?? [1, 1, 1];
-  renderer.setAmbientColor(amb[0], amb[1], amb[2]);
+  renderer.setAmbientColor(amb[0] * brightnessScale, amb[1] * brightnessScale, amb[2] * brightnessScale);
 
   const timeSeconds = performance.now() / 1000.0;
   renderer.drawWorld(camera, currentMap, wallsSheet.texture, floorsSheet.texture, ceilsSheet.texture, timeSeconds);
@@ -362,7 +370,10 @@ async function main(): Promise<void> {
   const gl = renderer.gl;
 
   const minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement | null;
-  if (minimapCanvas) minimapCtx = minimapCanvas.getContext('2d');
+  if (minimapCanvas) {
+    minimapEl = minimapCanvas;
+    minimapCtx = minimapCanvas.getContext('2d');
+  }
 
   input = new InputManager(canvas);
   audio = new AudioManager();
@@ -400,6 +411,20 @@ async function main(): Promise<void> {
 
   // "Return to Menu" HUD button
   document.getElementById('btn-menu')!.addEventListener('click', returnToMenu);
+
+  // Brightness adjustment keys (also suppress browser zoom on Minus/Equal)
+  window.addEventListener('keydown', e => {
+    if (!currentMap) return;
+    if (e.code === 'Equal' || e.code === 'NumpadAdd') {
+      e.preventDefault();
+      brightnessScale = Math.min(2.0, Math.round((brightnessScale + 0.1) * 10) / 10);
+      showBrightnessHUD();
+    } else if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
+      e.preventDefault();
+      brightnessScale = Math.max(0.1, Math.round((brightnessScale - 0.1) * 10) / 10);
+      showBrightnessHUD();
+    }
+  });
 
   window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
