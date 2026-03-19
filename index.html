@@ -51,12 +51,20 @@
       background:rgba(0,0,0,0.5); padding:2px 8px;
       z-index:5; display:none; pointer-events:none;
     }
+    #hud-brightness {
+      position:fixed; bottom:18px; left:18px;
+      color:#ffd700; font-family:monospace; font-size:1rem;
+      background:rgba(0,0,0,0.55); padding:3px 10px;
+      border-radius:3px; z-index:7; display:none;
+      pointer-events:none; transition:opacity 0.3s;
+    }
   </style>
 </head>
 <body>
   <canvas id="webdoom"></canvas>
   <canvas id="minimap" width="200" height="200"></canvas>
   <div id="hud-compass">N</div>
+  <div id="hud-brightness"></div>
   <div id="hud"></div>
   <button id="btn-menu" class="btn">MENU</button>
   <div id="overlay">
@@ -73,7 +81,7 @@
       <button class="btn" id="btn-level9">Level 9</button>
       <button class="btn" id="btn-level10">Level 10</button>
     </div>
-    <p style="font-size:0.8rem;margin-top:1rem;color:#888">Click canvas to capture mouse · WASD / arrows to move</p>
+    <p style="font-size:0.8rem;margin-top:1rem;color:#888">Click canvas to capture mouse · WASD / arrows to move · +/- brightness · TAB minimap</p>
   </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
