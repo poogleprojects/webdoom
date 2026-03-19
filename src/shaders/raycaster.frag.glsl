@@ -34,6 +34,9 @@ uniform vec3  u_fogColor;
 // Ambient light tint (per-level colour grading)
 uniform vec3  u_ambientColor;
 
+// Time (seconds) for animated effects
+uniform float u_time;
+
 const float TILE_COLS = 5.0;
 const float TILE_ROWS = 5.0;
 const float RAY_EPSILON   = 1e-30; // prevents division by zero in DDA
@@ -132,6 +135,12 @@ void main() {
         color = texture(u_wallsTex, uv).rgb;
 
         if (side == 1) color *= 0.6;
+
+        // Exit tile (value 9): pulsing green tint
+        if (hitTile == uint(9)) {
+            float pulse = 0.5 + 0.5 * sin(u_time * 4.0);
+            color = mix(color, vec3(0.0, 1.0, 0.0), pulse * 0.6);
+        }
 
     } else if (v_uv.y < wallTop) {
         // CEILING

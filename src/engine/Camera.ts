@@ -21,28 +21,28 @@ export class Camera {
     const [px, py] = this.pos;
     const [dx, dy] = this.dir;
 
-    // Forward/backward — support KeyW/KeyS (physical), ArrowUp/Down, and lowercase 'w'/'s'
-    if (input.isDown('KeyW') || input.isDown('ArrowUp') || input.isDown('w')) {
+    // Forward/backward — use e.code values (layout-independent)
+    if (input.isDown('KeyW') || input.isDown('ArrowUp')) {
       const nx = px + dx * this.moveSpeed * dt;
       const ny = py + dy * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
       if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
-    if (input.isDown('KeyS') || input.isDown('ArrowDown') || input.isDown('s')) {
+    if (input.isDown('KeyS') || input.isDown('ArrowDown')) {
       const nx = px - dx * this.moveSpeed * dt;
       const ny = py - dy * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
       if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
 
-    // Strafe — support KeyA/KeyD (physical) and lowercase 'a'/'d'
-    if (input.isDown('KeyA') || input.isDown('a')) {
+    // Strafe — use e.code values (layout-independent)
+    if (input.isDown('KeyA')) {
       const nx = px - this.plane[0] * this.moveSpeed * dt;
       const ny = py - this.plane[1] * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
       if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
-    if (input.isDown('KeyD') || input.isDown('d')) {
+    if (input.isDown('KeyD')) {
       const nx = px + this.plane[0] * this.moveSpeed * dt;
       const ny = py + this.plane[1] * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
