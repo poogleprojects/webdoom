@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>WebDoom</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:#000; overflow:hidden; }
+    #webdoom { display:block; width:100vw; height:100vh; }
+    #overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.8);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center; color:#f00;
+      font-family:monospace; font-size:2rem;
+      z-index:10;
+    }
+    #overlay h1 { margin-bottom:2rem; font-size:3rem; text-shadow:0 0 20px #f00; }
+    .btn {
+      margin:.5rem; padding:1rem 2rem;
+      background:#300; color:#f00; border:2px solid #f00;
+      font-family:monospace; font-size:1.5rem; cursor:pointer;
+    }
+    .btn:hover { background:#600; }
+    #hud {
+      position:fixed; top:50%; left:50%;
+      transform:translate(-50%,-50%);
+      width:8px; height:8px;
+      border:2px solid rgba(255,255,255,0.8);
+      border-radius:50%; pointer-events:none; z-index:5;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="webdoom"></canvas>
+  <div id="hud"></div>
+  <div id="overlay">
+    <h1>&#9760; WEBDOOM &#9760;</h1>
+    <button class="btn" id="btn-level1">Level 1: The Entry</button>
+    <button class="btn" id="btn-level2">Level 2: The Maze</button>
+    <p style="font-size:0.8rem;margin-top:1rem;color:#888">Click to capture mouse</p>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
