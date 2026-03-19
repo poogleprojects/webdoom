@@ -4,8 +4,15 @@ export class InputManager {
   private _pointerLocked: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
-    window.addEventListener('keydown', e => this.keys.add(e.code));
-    window.addEventListener('keyup', e => this.keys.delete(e.code));
+    window.addEventListener('keydown', e => {
+      this.keys.add(e.code);
+      // Also track by e.key (lowercased) so Camera can check 'w','a','s','d'
+      this.keys.add(e.key.toLowerCase());
+    });
+    window.addEventListener('keyup', e => {
+      this.keys.delete(e.code);
+      this.keys.delete(e.key.toLowerCase());
+    });
     canvas.addEventListener('click', () => canvas.requestPointerLock());
     document.addEventListener('pointerlockchange', () => {
       this._pointerLocked = document.pointerLockElement === canvas;
