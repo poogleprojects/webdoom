@@ -22,13 +22,13 @@ export class Camera {
     const [dx, dy] = this.dir;
 
     // Forward/backward — use e.code values (layout-independent)
-    if (input.isDown('KeyW') || input.isDown('ArrowUp')) {
+    if (input.isDown('KeyW') || input.isDown('Keyw') || input.isDown('ArrowUp')) {
       const nx = px + dx * this.moveSpeed * dt;
       const ny = py + dy * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
       if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
-    if (input.isDown('KeyS') || input.isDown('ArrowDown')) {
+    if (input.isDown('KeyS') || input.isDown('Keys') || input.isDown('ArrowDown')) {
       const nx = px - dx * this.moveSpeed * dt;
       const ny = py - dy * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
@@ -36,13 +36,13 @@ export class Camera {
     }
 
     // Strafe — use e.code values (layout-independent)
-    if (input.isDown('KeyA')) {
+    if (input.isDown('KeyA') || input.isDown('Keya')) {
       const nx = px - this.plane[0] * this.moveSpeed * dt;
       const ny = py - this.plane[1] * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
       if (Camera._passable(tiles, Math.floor(ny), Math.floor(px))) this.pos[1] = ny;
     }
-    if (input.isDown('KeyD')) {
+    if (input.isDown('KeyD') || input.isDown('Keyd')) {
       const nx = px + this.plane[0] * this.moveSpeed * dt;
       const ny = py + this.plane[1] * this.moveSpeed * dt;
       if (Camera._passable(tiles, Math.floor(py), Math.floor(nx))) this.pos[0] = nx;
