@@ -2,11 +2,12 @@ export class InputManager {
   private keys = new Set<string>();
   private _mouseDX: number = 0;
   private _pointerLocked: boolean = false;
+  private _mouseClicked = false;
 
   constructor(canvas: HTMLCanvasElement) {
     window.addEventListener('keydown', e => {
       this.keys.add(e.code);
-      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.code)) {
         e.preventDefault();
       }
     });
@@ -14,6 +15,9 @@ export class InputManager {
       this.keys.delete(e.code);
     });
     canvas.addEventListener('click', () => canvas.requestPointerLock());
+    canvas.addEventListener('mousedown', e => {
+      if (e.button === 0 && this._pointerLocked) this._mouseClicked = true;
+    });
     document.addEventListener('pointerlockchange', () => {
       this._pointerLocked = document.pointerLockElement === canvas;
     });
@@ -30,5 +34,11 @@ export class InputManager {
     const dx = this._mouseDX;
     this._mouseDX = 0;
     return dx;
+  }
+
+  consumeClick(): boolean {
+    const clicked = this._mouseClicked;
+    this._mouseClicked = false;
+    return clicked;
   }
 }

@@ -30,6 +30,17 @@ let footstepTimer = 0;
 let groanTimer = 0;
 let levelTransitioning = false;
 
+let minimapVisible = false;
+let lastTabDown = false;
+let slashCooldown = 0;
+let slashAnimTimer = 0;
+let lastSpaceDown = false;
+
+const SLASH_RADIUS = 1.5;
+const SLASH_FOV = Math.PI / 3;
+const SLASH_COOLDOWN = 0.5;
+const SLASH_ANIM_DURATION = 0.2; // seconds the slash HUD indicator is shown
+
 const LEVEL_URLS = [
   '/maps/level1.wdmap.json',
   '/maps/level2.wdmap.json',
@@ -132,8 +143,13 @@ function updateCompass(): void {
 function showHUD(visible: boolean): void {
   const minimap = document.getElementById('minimap') as HTMLCanvasElement | null;
   const compass = document.getElementById('hud-compass');
-  if (minimap) minimap.style.display = visible ? 'block' : 'none';
+  const slashEl = document.getElementById('hud-slash');
+  if (!visible) {
+    minimapVisible = false;
+    if (minimap) minimap.style.display = 'none';
+  }
   if (compass) compass.style.display = visible ? 'block' : 'none';
+  if (slashEl) slashEl.style.display = 'none';
 }
 
 function showFlash(text: string, durationMs: number): void {
@@ -175,6 +191,17 @@ function gameLoop(timestamp: number): void {
   const prevY = camera.pos[1];
   camera.update(dt, input, currentMap);
 
+  // TAB toggles minimap
+  const tabDown = input.isDown('Tab');
+  if (tabDown !== lastTabDown) {
+    lastTabDown = tabDown;
+    if (tabDown) {
+      minimapVisible = !minimapVisible;
+      const mm = document.getElementById('minimap') as HTMLCanvasElement | null;
+      if (mm) mm.style.display = minimapVisible ? 'block' : 'none';
+    }
+  }
+
   // Footstep sounds while moving
   const moved = camera.pos[0] !== prevX || camera.pos[1] !== prevY;
   if (moved) {
@@ -211,6 +238,39 @@ function gameLoop(timestamp: number): void {
     s.update(dt, camera.pos[0], camera.pos[1], currentMap.tiles);
   }
 
+  // Slash cooldown timers
+  if (slashCooldown > 0) slashCooldown -= dt;
+  if (slashAnimTimer > 0) slashAnimTimer -= dt;
+
+  // Trigger slash on Space (toggle-edge), F key, or left mouse click
+  const spaceDown = input.isDown('Space') || input.isDown('KeyF');
+  const attackTriggered = (spaceDown && !lastSpaceDown) || input.consumeClick();
+  lastSpaceDown = spaceDown;
+
+  if (attackTriggered && slashCooldown <= 0) {
+    slashCooldown = SLASH_COOLDOWN;
+    slashAnimTimer = SLASH_ANIM_DURATION;
+    audio.playSlash();
+
+    for (const s of sprites) {
+      if (!s.active) continue;
+      if (s.distToPlayer > SLASH_RADIUS) continue;
+      const dx = s.x - camera.pos[0];
+      const dy = s.y - camera.pos[1];
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 0.001) { // epsilon: monster on top of player — always hit, avoids div-by-zero
+        s.active = false;
+        continue;
+      }
+      const nx = dx / dist;
+      const ny = dy / dist;
+      const dot = nx * camera.dir[0] + ny * camera.dir[1];
+      if (dot >= Math.cos(SLASH_FOV)) {
+        s.active = false;
+      }
+    }
+  }
+
   // Handle monster attacks → hurt sound + respawn
   for (const s of sprites) {
     if (s.playerHit) {
@@ -241,7 +301,18 @@ function gameLoop(timestamp: number): void {
   renderer.drawWorld(camera, currentMap, wallsSheet.texture, floorsSheet.texture, ceilsSheet.texture, timeSeconds);
   renderer.drawSprites(camera, sprites, spriteSheet);
 
-  drawMinimap(currentMap);
+  // Update slash flash HUD
+  const slashEl = document.getElementById('hud-slash');
+  if (slashEl) {
+    if (slashAnimTimer > 0) {
+      slashEl.style.display = 'block';
+      slashEl.style.opacity = String(slashAnimTimer / SLASH_ANIM_DURATION);
+    } else {
+      slashEl.style.display = 'none';
+    }
+  }
+
+  if (minimapVisible && currentMap) drawMinimap(currentMap);
   updateCompass();
 
   animFrameId = requestAnimationFrame(gameLoop);
