@@ -6,6 +6,7 @@ export interface MapMeta {
   spawnPoint: { x: number; y: number; angle: number };
   fogDist: number;
   fogColor: [number, number, number];
+  ambientColor: [number, number, number];
 }
 
 export interface SpriteData {
